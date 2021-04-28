@@ -1,7 +1,8 @@
 #include <Arduino.h>
+#include "signalgenerator.hpp"
 
 void setup() {
-  // put your setup code here, to run once:
+  initializeDMAC();
 }
 
 void loop() {
