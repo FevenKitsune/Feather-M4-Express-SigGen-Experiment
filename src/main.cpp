@@ -2,7 +2,7 @@
 #include "signalgenerator.hpp"
 
 void setup() {
-  SignalGenerator sig;
+  SignalGenerator sig(5);
   sig.populateBuffer(1000);
   sig.initializeDMAC();
 }
