@@ -1,6 +1,19 @@
 #include "signalgenerator.hpp"
 
-int16_t populateBuffer(uint32_t frequency)
+SignalGenerator::SignalGenerator(uint8_t desired_channel)
+{
+    channel = desired_channel;
+    buffer = NULL;
+    buffer = new uint16_t[BUFFER_SIZE];
+}
+SignalGenerator::~SignalGenerator()
+{
+    if (buffer != NULL)
+    {
+        delete[] buffer;
+    }
+}
+int16_t SignalGenerator::populateBuffer(uint32_t frequency)
 {
     float value;
     buffer_utilization = (1000000 / frequency > BUFFER_SIZE) ? BUFFER_SIZE : 1000000 / frequency;
@@ -12,7 +25,7 @@ int16_t populateBuffer(uint32_t frequency)
     }
     return ERR_NONE;
 }
-int16_t initializeDMAC()
+int16_t SignalGenerator::initializeDMAC()
 {
     populateBuffer(INITIAL_FREQUENCY);
     DMAC->BASEADDR.reg = (uint32_t)descriptor_section;           // Specify the location of the descriptors
@@ -21,16 +34,16 @@ int16_t initializeDMAC()
     analogWriteResolution(12);                                   // Set the DAC's resolution to 12-bits
     analogWrite(A0, 0);                                          // Initialise DAC0
 
-    DMAC->Channel[5].CHCTRLA.reg = DMAC_CHCTRLA_TRIGSRC(TC0_DMAC_ID_OVF) |             // Set DMAC to trigger when TC0 timer overflows
-                                   DMAC_CHCTRLA_TRIGACT_BURST;                         // DMAC burst transfer
-    descriptor.descaddr = (uint32_t)&descriptor_section[5];                            // Set up a circular descriptor
+    DMAC->Channel[channel].CHCTRLA.reg = DMAC_CHCTRLA_TRIGSRC(TC0_DMAC_ID_OVF) |       // Set DMAC to trigger when TC0 timer overflows
+                                         DMAC_CHCTRLA_TRIGACT_BURST;                   // DMAC burst transfer
+    descriptor.descaddr = (uint32_t)&descriptor_section[channel];                      // Set up a circular descriptor
     descriptor.srcaddr = (uint32_t)&buffer[0] + buffer_utilization * sizeof(uint16_t); // Read the current value in the sine table
     descriptor.dstaddr = (uint32_t)&DAC->DATA[0].reg;                                  // Copy it into the DAC data register
     descriptor.btcnt = buffer_utilization;                                             // This takes the number of sine table entries = 1000 beats
     descriptor.btctrl = DMAC_BTCTRL_BEATSIZE_HWORD |                                   // Set the beat size to 16-bits (Half Word)
                         DMAC_BTCTRL_SRCINC |                                           // Increment the source address every beat
                         DMAC_BTCTRL_VALID;                                             // Flag the descriptor as valid
-    memcpy((void *)&descriptor_section[5], &descriptor, sizeof(dmacdescriptor));       // Copy to the channel 5 descriptor
+    memcpy((void *)&descriptor_section[channel], &descriptor, sizeof(dmacdescriptor)); // Copy to the channel #channel descriptor
 
     GCLK->PCHCTRL[TC0_GCLK_ID].reg = GCLK_PCHCTRL_CHEN |     // Enable perhipheral channel for TC0
                                      GCLK_PCHCTRL_GEN_GCLK1; // Connect generic clock 1 at 48MHz
@@ -44,16 +57,16 @@ int16_t initializeDMAC()
     while (TC0->COUNT16.SYNCBUSY.bit.ENABLE)
         ; // Wait for synchronization
 
-    DMAC->Channel[5].CHCTRLA.bit.ENABLE = 1; // Enable DMAC on channel 5
+    DMAC->Channel[5].CHCTRLA.bit.ENABLE = 1; // Enable DMAC on channel #channel
     return ERR_NONE;
 }
 
-int16_t refreshDMAC()
+int16_t SignalGenerator::refreshDMAC()
 {
-    DMAC->Channel[5].CHCTRLA.bit.ENABLE = 0;                                           // Disable DMAC on channel 5
+    DMAC->Channel[channel].CHCTRLA.bit.ENABLE = 0;                                     // Disable DMAC on channel #channel
     descriptor.srcaddr = (uint32_t)&buffer[0] + buffer_utilization * sizeof(uint16_t); // Update the source address of the sine table.
     descriptor.btcnt = buffer_utilization;                                             // Update the beat-count to match the new sample-count.
-    memcpy((void *)&descriptor_section[5], &descriptor, sizeof(dmacdescriptor));       // Copy updated dmacdescriptor to the channel 5 descriptor
-    DMAC->Channel[5].CHCTRLA.bit.ENABLE = 1;                                           // Enable DMAC on channel 5
+    memcpy((void *)&descriptor_section[channel], &descriptor, sizeof(dmacdescriptor)); // Copy updated dmacdescriptor to the channel #channel descriptor
+    DMAC->Channel[5].CHCTRLA.bit.ENABLE = 1;                                           // Enable DMAC on channel #channel
     return ERR_NONE;
 }
