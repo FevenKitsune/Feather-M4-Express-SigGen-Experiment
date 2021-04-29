@@ -3,8 +3,9 @@
 
 void setup() {
   SignalGenerator sig(5);
-  sig.populateBuffer(1000);
   sig.initializeDMAC();
+  sig.populateBuffer(3000);
+  sig.refreshDMAC();
 }
 
 void loop() {

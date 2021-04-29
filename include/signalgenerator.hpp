@@ -22,7 +22,6 @@ private:
 
 public:
     SignalGenerator(uint8_t channel);
-    ~SignalGenerator();
     int16_t populateBuffer(uint32_t frequency);
     int16_t initializeDMAC();
     int16_t refreshDMAC();

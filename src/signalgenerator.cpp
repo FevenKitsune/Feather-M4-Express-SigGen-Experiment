@@ -3,16 +3,9 @@
 SignalGenerator::SignalGenerator(uint8_t desired_channel)
 {
     channel = desired_channel;
-    buffer = NULL;
     buffer = new uint16_t[BUFFER_SIZE];
 }
-SignalGenerator::~SignalGenerator()
-{
-    if (buffer != NULL)
-    {
-        delete[] buffer;
-    }
-}
+
 int16_t SignalGenerator::populateBuffer(uint32_t frequency)
 {
     float value;
@@ -57,16 +50,24 @@ int16_t SignalGenerator::initializeDMAC()
     while (TC0->COUNT16.SYNCBUSY.bit.ENABLE)
         ; // Wait for synchronization
 
-    DMAC->Channel[5].CHCTRLA.bit.ENABLE = 1; // Enable DMAC on channel #channel
+    DMAC->Channel[channel].CHCTRLA.bit.ENABLE = 1; // Enable DMAC on channel #channel
     return ERR_NONE;
 }
 
 int16_t SignalGenerator::refreshDMAC()
 {
+    TC0->COUNT16.CTRLA.bit.ENABLE = 0; // Disable the TC0 timer
+    while (!TC0->COUNT16.SYNCBUSY.bit.ENABLE)
+        ;                                                                              // Wait for synchronization
     DMAC->Channel[channel].CHCTRLA.bit.ENABLE = 0;                                     // Disable DMAC on channel #channel
+    descriptor.descaddr = (uint32_t)&descriptor_section[channel];                      // Set up a circular descriptor
     descriptor.srcaddr = (uint32_t)&buffer[0] + buffer_utilization * sizeof(uint16_t); // Update the source address of the sine table.
+    descriptor.dstaddr = (uint32_t)&DAC->DATA[0].reg;                                  // Copy it into the DAC data register
     descriptor.btcnt = buffer_utilization;                                             // Update the beat-count to match the new sample-count.
     memcpy((void *)&descriptor_section[channel], &descriptor, sizeof(dmacdescriptor)); // Copy updated dmacdescriptor to the channel #channel descriptor
-    DMAC->Channel[5].CHCTRLA.bit.ENABLE = 1;                                           // Enable DMAC on channel #channel
+    TC0->COUNT16.CTRLA.bit.ENABLE = 1;                                                 // Enable the TC0 timer
+    while (TC0->COUNT16.SYNCBUSY.bit.ENABLE)
+        ;                                    // Wait for synchronization
+    DMAC->Channel[channel].CHCTRLA.bit.ENABLE = 1; // Enable DMAC on channel #channel
     return ERR_NONE;
 }
