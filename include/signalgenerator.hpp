@@ -13,7 +13,8 @@
 class SignalGenerator
 {
 private:
-    uint8_t channel;
+    uint8_t dmac_channel;
+    uint8_t dac;
     volatile uint32_t buffer_utilization;
     volatile uint16_t *buffer;
     volatile dmacdescriptor wrb[DMAC_CH_NUM] __attribute__((aligned(16)));       // Write-back DMAC descriptors
@@ -21,7 +22,7 @@ private:
     dmacdescriptor descriptor __attribute__((aligned(16)));                      // Place holder descriptor
 
 public:
-    SignalGenerator(uint8_t channel);
+    SignalGenerator(uint8_t desired_dmac_channel, uint8_t desired_dac);
     int16_t populateBuffer(uint32_t frequency);
     int16_t initializeDMAC();
     int16_t refreshDMAC();
