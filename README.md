@@ -1,4 +1,4 @@
-# [Shelved] Feather-M4-Express-Educational-Multitool
+# [Shelved] Feather-M4-Express-SigGen-Experiment
 
 A project to make the Adafruit Feather M4 Express a multi-purpose classroom electronics tool.
 
